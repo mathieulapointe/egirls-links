@@ -5,24 +5,30 @@ services:
       POSTGRES_DB: egirls_links
       POSTGRES_USER: egirls
       POSTGRES_PASSWORD: egirls_dev_password
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   web:
     image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./:/app
+    working_dir: /src
     environment:
       DATABASE_URL: postgresql://egirls:egirls_dev_password@db:5432/egirls_links
-      NODE_ENV: development
-    command: sh -lc "npm install && npx prisma migrate dev --name init && npm run dev -- --hostname 0.0.0.0 --port 3000"
-    ports:
-      - "3000:3000"
+      NODE_ENV: production
+    command: >
+      sh -lc "
+      apk add --no-cache curl tar &&
+      rm -rf /src/* &&
+      curl -L https://codeload.github.com/mathieulapointe/egirls-links/tar.gz/refs/heads/main
+      | tar -xz --strip-components=1 &&
+      npm ci &&
+      npx prisma migrate deploy &&
+      npm run build &&
+      npm run start -- --hostname 0.0.0.0 --port 3000
+      "
     depends_on:
       - db
+    ports:
+      - \"3000:3000\"
 
 volumes:
   pgdata:
